@@ -21,9 +21,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "st7789.h"
 #include "xpt2046.h"
-#include <stdio.h>
 #include "cnn.h"
 #include "constants.h"
 /* USER CODE END Includes */
@@ -49,9 +49,7 @@ SPI_HandleTypeDef hspi2;
 DMA_HandleTypeDef hdma_spi1_tx;
 
 /* USER CODE BEGIN PV */
-uint16_t coordinate_x = 0;
-uint16_t coordinate_y = 0;
-float cnn_input[INPUT_SIZE * INPUT_SIZE] = {0};	// to store CNN input
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -66,7 +64,7 @@ static void MX_SPI2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void clearCNNinput(float *in_mat)
+void clearCNNinput(volatile float *in_mat)
 {
 	uint8_t i = 0;
 	uint8_t j = 0;
@@ -80,7 +78,7 @@ void clearCNNinput(float *in_mat)
 	}
 }
 
-void resetButtonPressed()
+void resetButtonPressed(volatile float* cnn_input, volatile uint16_t coordinate_x, volatile uint16_t coordinate_y)
 {
 	if ((coordinate_x > 157 && coordinate_x < 208) &&
 		(coordinate_y >  23 && coordinate_y <  43))
@@ -90,8 +88,8 @@ void resetButtonPressed()
 		HAL_Delay(100);
 		ST7789_WriteString(45, 10, "Predicted: _", Font_7x10, RED, WHITE);
 		ST7789_WriteString(45, 25, "Conf.: _____", Font_7x10, RED, WHITE);
+		clearCNNinput(cnn_input);
 	}
-	clearCNNinput(cnn_input);
 }
 
 void drawInterface()
@@ -121,23 +119,25 @@ void drawInterface()
 	ST7789_DrawRectangle(8, 88, 232, 312, BLACK);
 }
 
-void drawMinimap(float *in_mat)
+void drawMinimap(volatile float *in_mat)
 {
 	// (x1, y1) = (10, 10)
 	uint8_t i = 0;
 	uint8_t j = 0;
+	uint16_t in_mat_idx = 0;
+
+	// Loop through matrix and draw pixels
 	for (i = 0; i < INPUT_SIZE; i++)
 	{
-		for (j = 0; j < INPUT_SIZE; j ++)
+		for (j = 0; j < INPUT_SIZE; j++)
 		{
-			uint16_t in_mat_idx = i * INPUT_SIZE + j;
-			if (in_mat[in_mat_idx] != 0)
-			{
-				ST7789_DrawPixel(10 + i, 10 + j, RED);
-			}
+			in_mat_idx = i * INPUT_SIZE + j;  // Calculate the index once per loop
+			uint16_t color = (in_mat[in_mat_idx] == 0) ? WHITE : RED; // Determine color
+			ST7789_DrawPixel(10 + i, 10 + j, color);  // Draw pixel with selected color
 		}
 	}
 }
+
 
 /* USER CODE END 0 */
 
@@ -185,6 +185,17 @@ int main(void)
 //  ST7789_Test();
   char print_string[30];
   uint8_t change_flag = 0;
+  volatile uint16_t coordinate_x = 0;
+  volatile uint16_t coordinate_y = 0;
+  volatile float cnn_input[INPUT_SIZE * INPUT_SIZE];	// to store CNN input
+	for (uint16_t i = 0; i < INPUT_SIZE; i++)
+	{
+		for (uint16_t j = 0; j < INPUT_SIZE; j++)
+		{
+			uint16_t in_mat_idx = i * INPUT_SIZE + j;  // Calculate the index once per loop
+			cnn_input[in_mat_idx] = 0;
+		}
+	}
 
   drawInterface();
   while (1)
@@ -235,19 +246,69 @@ int main(void)
 		// update input mat
 		uint8_t cnn_input_idx_x = (coordinate_x - 25)/ 7;
 		uint8_t cnn_input_idx_y = (coordinate_y - 108)/ 7;
-		uint16_t cnn_input_index = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y;
-		cnn_input[cnn_input_index] = 1;
+		// make the input bolder - enlarge the input to 4 pixel
+		uint16_t cnn_input_index00 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y;
+		uint16_t cnn_input_index01 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y - 1;
+		uint16_t cnn_input_index02 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y;
+		uint16_t cnn_input_index03 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y + 1;
+		uint16_t cnn_input_index04 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y - 1;
+		uint16_t cnn_input_index05 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y + 1;
+		uint16_t cnn_input_index06 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y - 1;
+		uint16_t cnn_input_index07 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y;
+		uint16_t cnn_input_index08 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y + 1;
 
-		// draw mini drawin plane
-		drawMinimap(cnn_input);
+		if (cnn_input_index00 < INPUT_SIZE * INPUT_SIZE)
+		{
+		    cnn_input[cnn_input_index00] = 1.0f;
+		}
+
+		if (cnn_input_index01 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index01] = 0.5f;
+		}
+
+		if (cnn_input_index02 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index02] = 1.0f;
+		}
+
+		if (cnn_input_index03 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index03] = 0.5f;
+		}
+
+		if (cnn_input_index04 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index04] = 1.0f;
+		}
+
+		if (cnn_input_index05 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index05] = 1.0f;
+		}
+
+		if (cnn_input_index06 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index06] = 0.5f;
+		}
+
+		if (cnn_input_index07 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index07] = 1.0f;
+		}
+
+		if (cnn_input_index08 < INPUT_SIZE * INPUT_SIZE)
+		{
+			cnn_input[cnn_input_index08] = 0.5f;
+		}
 	}
 
 	// CNN button:
 	if ((coordinate_x > 157 && coordinate_x < 208) &&
 			(coordinate_y >  59 && coordinate_y <  71))
 	{
-		uint8_t predicted_num = 0;
-		float predicted_num_confidence = 0.0;
+		volatile uint8_t predicted_num = 0;
+		volatile float predicted_num_confidence = 0.0;
 		feedforward(cnn_input, &predicted_num, &predicted_num_confidence);
 		sprintf(print_string,"Predicted: %d", predicted_num);
 		ST7789_WriteString(45, 10, print_string, Font_7x10, RED, WHITE);
@@ -255,11 +316,11 @@ int main(void)
 		ST7789_WriteString(45, 25, print_string, Font_7x10, RED, WHITE);
 	}
 
-
+	// draw mini drawin plane
+	drawMinimap(cnn_input);
 
 	// Reset button
-	resetButtonPressed();
-
+	resetButtonPressed(cnn_input,  coordinate_x, coordinate_y);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

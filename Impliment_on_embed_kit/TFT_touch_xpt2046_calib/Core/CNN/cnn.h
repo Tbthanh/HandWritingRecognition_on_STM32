@@ -36,16 +36,16 @@
 
 /* Function prototype---------------------------------------------------------*/
 /* Convolution sub functions  *************************************************/
-void conv2d(float *in_mat, float *out_mat, float *filter_weight, float *filter_bias, int in_dim, int in_ch, int out_ch);
-void relu(float *mat, int mat_size, int num_ch);
-void softmax(float *in_mat, float *out_mat, int mat_size);
-void fullyconnected(float *in_mat, float *out_mat, float *weight, float *bias, int in_mat_size, int out_mat_size);
-void maxpooling2x2(float *in_mat, float *out_mat, uint8_t in_mat_size, uint8_t num_ch);
+void conv2d(volatile float *in_mat, volatile float *out_mat, float *filter_weight, float *filter_bias, int in_dim, int in_ch, int out_ch);
+void relu(volatile float *mat, int mat_size, int num_ch);
+void softmax(volatile float *in_mat, volatile float *out_mat, int mat_size);
+void fullyconnected(volatile float *in_mat, volatile float *out_mat, float *weight, float *bias, int in_mat_size, int out_mat_size);
+void maxpooling2x2(volatile float *in_mat, volatile float *out_mat, uint8_t in_mat_size, uint8_t num_ch);
 int afterKernel(int n);
-void givePredict(float *mat, uint8_t *predicted_num, float *predicted_num_confidence);
+void givePredict(volatile float *mat, volatile uint8_t *predicted_num, volatile float *predicted_num_confidence);
 
 /* Convolution BIGGGGboi functions  *******************************************/
-void feedforward(float *in_mat, uint8_t *predicted_num, float *predicted_num_confidence);
+void feedforward(volatile float *in_mat, volatile uint8_t *predicted_num, volatile float *predicted_num_confidence);
 
 
 /* Ultility functions  *******************************************/
