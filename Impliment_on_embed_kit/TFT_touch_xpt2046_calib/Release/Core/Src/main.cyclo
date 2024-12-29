@@ -1,0 +1,7 @@
+../Core/Src/main.c:69:6:clearCNNinput	1
+../Core/Src/main.c:83:6:resetButtonPressed	3
+../Core/Src/main.c:97:6:drawInterface	1
+../Core/Src/main.c:124:6:drawMinimap	4
+../Core/Src/main.c:274:6:SystemClock_Config	3
+../Core/Src/main.c:148:5:main	13
+../Core/Src/main.c:461:6:Error_Handler	1

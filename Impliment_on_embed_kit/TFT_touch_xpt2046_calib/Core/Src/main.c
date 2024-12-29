@@ -24,6 +24,8 @@
 #include "st7789.h"
 #include "xpt2046.h"
 #include <stdio.h>
+#include "cnn.h"
+#include "constants.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,6 +51,7 @@ DMA_HandleTypeDef hdma_spi1_tx;
 /* USER CODE BEGIN PV */
 uint16_t coordinate_x = 0;
 uint16_t coordinate_y = 0;
+float cnn_input[INPUT_SIZE * INPUT_SIZE] = {0};	// to store CNN input
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -63,6 +66,78 @@ static void MX_SPI2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void clearCNNinput(float *in_mat)
+{
+	uint8_t i = 0;
+	uint8_t j = 0;
+	for (i = 0; i < INPUT_SIZE; i++)
+	{
+		for (j = 0; j < INPUT_SIZE; j ++)
+		{
+			uint16_t in_mat_idx = i * INPUT_SIZE + j;
+			in_mat[in_mat_idx] = 0;
+		}
+	}
+}
+
+void resetButtonPressed()
+{
+	if ((coordinate_x > 157 && coordinate_x < 208) &&
+		(coordinate_y >  23 && coordinate_y <  43))
+	{
+		ST7789_DrawFilledRectangle(10, 90, 220, 220, WHITE);
+		ST7789_DrawFilledRectangle(10, 10, 28, 28, WHITE);
+		HAL_Delay(100);
+		ST7789_WriteString(45, 10, "Predicted: _", Font_7x10, RED, WHITE);
+		ST7789_WriteString(45, 25, "Conf.: _____", Font_7x10, RED, WHITE);
+	}
+	clearCNNinput(cnn_input);
+}
+
+void drawInterface()
+{
+	// Turn screen Black
+//	ST7789_InvertColors(ST7789_INVOFF);
+	ST7789_Fill_Color(WHITE);
+	HAL_Delay(500);
+//	ST7789_WriteString(10, 20, "Touch Test", Font_11x18, RED, WHITE);
+//	HAL_Delay(500);
+
+	// Draw resset button
+	ST7789_DrawFilledRectangle(158, 8, 59, 22, BLACK);
+	ST7789_WriteString(160, 10, "RESET", Font_11x18, CYAN, BLACK);// 160~226 - 20~38
+
+	// Draw CNN button
+	ST7789_DrawFilledRectangle(158, 38, 59, 22, BLACK);
+	ST7789_WriteString(160, 40, " CNN ", Font_11x18, CYAN, BLACK);// 160~226 - 20~38
+
+	// Minimap border
+	ST7789_DrawRectangle(8, 8, 40, 40, BLACK);
+	ST7789_WriteString(8, 45, "CNN input:", Font_7x10, RED, WHITE);
+	ST7789_WriteString(45, 10, "Predicted: _", Font_7x10, RED, WHITE);
+	ST7789_WriteString(45, 25, "Conf.: _____", Font_7x10, RED, WHITE);
+
+	// Draw drawing border
+	ST7789_DrawRectangle(8, 88, 232, 312, BLACK);
+}
+
+void drawMinimap(float *in_mat)
+{
+	// (x1, y1) = (10, 10)
+	uint8_t i = 0;
+	uint8_t j = 0;
+	for (i = 0; i < INPUT_SIZE; i++)
+	{
+		for (j = 0; j < INPUT_SIZE; j ++)
+		{
+			uint16_t in_mat_idx = i * INPUT_SIZE + j;
+			if (in_mat[in_mat_idx] != 0)
+			{
+				ST7789_DrawPixel(10 + i, 10 + j, RED);
+			}
+		}
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -108,27 +183,10 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 //  ST7789_Test();
-  char coordinate_string[20];
+  char print_string[30];
   uint8_t change_flag = 0;
 
-  // Turn screen Blackj
-//  ST7789_InvertColors(ST7789_INVOFF);
-  ST7789_Fill_Color(WHITE);
-  HAL_Delay(500);
-  ST7789_WriteString(10, 20, "Touch Test", Font_11x18, RED, WHITE);
-  HAL_Delay(500);
-  ST7789_DrawPixel_4px( 10,  10, CYAN);
-  ST7789_DrawPixel_4px(230,  10, CYAN);
-  ST7789_DrawPixel_4px( 10, 310, CYAN);
-  ST7789_DrawPixel_4px(230, 310, CYAN);
-
-  // Draw resset button
-  ST7789_DrawFilledRectangle(158, 18, 70, 22, BLACK);
-  ST7789_WriteString(160, 20, "RESET", Font_11x18, CYAN, BLACK);// 160~226 - 20~38
-
-  // Draw drawing border
-  ST7789_DrawRectangle(8, 88, 232, 312, BLACK);
-
+  drawInterface();
   while (1)
   {
 	uint16_t pre_coordinate_x = coordinate_x;
@@ -139,13 +197,13 @@ int main(void)
 		// do smt
 		if (change_flag != 0)
 		{
-			ST7789_DrawFilledRectangle(54, 40, 66, 18, WHITE);
-			sprintf(coordinate_string,"x = 0");
-			ST7789_WriteString(10, 40, coordinate_string, Font_11x18, RED, WHITE);
+			ST7789_DrawFilledRectangle(38, 66, 60, 10, WHITE);
+			sprintf(print_string,"x = 0");
+			ST7789_WriteString(10, 66, print_string, Font_7x10, RED, WHITE);
 			HAL_Delay(50);
-			ST7789_DrawFilledRectangle(54, 60, 66, 18, WHITE);
-			sprintf(coordinate_string,"y = 0");
-			ST7789_WriteString(10, 60, coordinate_string, Font_11x18, RED, WHITE);
+			ST7789_DrawFilledRectangle(38, 78, 60, 9, WHITE);
+			sprintf(print_string,"y = 0");
+			ST7789_WriteString(10, 78, print_string, Font_7x10, RED, WHITE);
 			HAL_Delay(50);
 			change_flag = 0;
 		}
@@ -153,11 +211,11 @@ int main(void)
 	else
 	{
 		// update screen
-		sprintf(coordinate_string,"x = %d", coordinate_x);
-		ST7789_WriteString(10, 40, coordinate_string, Font_11x18, RED, WHITE);
+		sprintf(print_string,"x = %d", coordinate_x);
+		ST7789_WriteString(10, 66, print_string, Font_7x10, RED, WHITE);
 //		HAL_Delay(100);
-		sprintf(coordinate_string,"y = %d", coordinate_y );
-		ST7789_WriteString(10, 60, coordinate_string, Font_11x18, RED, WHITE);
+		sprintf(print_string,"y = %d", coordinate_y );
+		ST7789_WriteString(10, 78, print_string, Font_7x10, RED, WHITE);
 //		HAL_Delay(100);
 		change_flag = 1;
 	}
@@ -172,24 +230,36 @@ int main(void)
 			(coordinate_y < pre_coordinate_y + 10) && (coordinate_y > pre_coordinate_y - 10)
 		)
 	{
-//		ST7789_DrawPixel_4px(coordinate_x - 3, coordinate_y - 3, RED);
-//		ST7789_DrawPixel_4px(coordinate_x - 3, coordinate_y, RED);
-//		ST7789_DrawPixel_4px(coordinate_x, coordinate_y - 3, RED);
-//		ST7789_DrawPixel_4px(coordinate_x, coordinate_y, RED);
 		ST7789_DrawFilledRectangle(coordinate_x - 4, coordinate_y - 4, 8, 8, RED);
-//		ST7789_DrawFilledCircle(coordinate_x - 4, coordinate_y - 4, 6, RED);
-//		HAL_Delay(10);
+
+		// update input mat
+		uint8_t cnn_input_idx_x = (coordinate_x - 25)/ 7;
+		uint8_t cnn_input_idx_y = (coordinate_y - 108)/ 7;
+		uint16_t cnn_input_index = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y;
+		cnn_input[cnn_input_index] = 1;
+
+		// draw mini drawin plane
+		drawMinimap(cnn_input);
 	}
 
-	// Reset button
-	if (
-			(coordinate_x > 164 && coordinate_x < 225) &&
-			(coordinate_y >  42 && coordinate_y <  59)
-		)
+	// CNN button:
+	if ((coordinate_x > 157 && coordinate_x < 208) &&
+			(coordinate_y >  59 && coordinate_y <  71))
 	{
-		ST7789_DrawFilledRectangle(10, 90, 220, 220, WHITE);
-		HAL_Delay(100);
+		uint8_t predicted_num = 0;
+		float predicted_num_confidence = 0.0;
+		feedforward(cnn_input, &predicted_num, &predicted_num_confidence);
+		sprintf(print_string,"Predicted: %d", predicted_num);
+		ST7789_WriteString(45, 10, print_string, Font_7x10, RED, WHITE);
+		sprintf(print_string,"Conf.: %.3f", predicted_num_confidence);
+		ST7789_WriteString(45, 25, print_string, Font_7x10, RED, WHITE);
 	}
+
+
+
+	// Reset button
+	resetButtonPressed();
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

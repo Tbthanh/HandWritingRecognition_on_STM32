@@ -1,0 +1,13 @@
+../Core/CNN/cnn.c:63:6:conv2d	88	static
+../Core/CNN/cnn.c:113:6:relu	24	static
+../Core/CNN/cnn.c:149:6:softmax	40	static
+../Core/CNN/cnn.c:183:6:fullyconnected	24	static
+../Core/CNN/cnn.c:205:6:maxpooling2x2	36	static
+../Core/CNN/cnn.c:247:5:afterKernel	0	static
+../Core/CNN/cnn.c:252:6:givePredict	8	static
+../Core/CNN/cnn.c:270:6:feedforward	36608	static
+../Core/CNN/cnn.c:325:6:printMatrix	56	static
+../Core/CNN/cnn.c:358:6:printFilterBias	24	static
+../Core/CNN/cnn.c:367:6:printMat1D	0	static
+../Core/CNN/cnn.c:374:6:printFilterWeight	32	static
+../Core/CNN/cnn.c:384:6:printPredict	16	static
