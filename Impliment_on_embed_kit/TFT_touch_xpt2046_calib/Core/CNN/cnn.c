@@ -38,6 +38,8 @@
 #include "lin1_params.h"
 #include "lin2_params.h"
 
+volatile float wtf_mat[WTF_NUM] = {0.0f};
+
 /**
   ******************************************************************************
   * @brief   Performs a 2D convolution operation.
@@ -60,7 +62,7 @@
   * 		 is defined and can be redefined in "constants.h".
   ******************************************************************************
   */
-void conv2d(float *in_mat, float *out_mat, float *filter_weight, float *filter_bias, int in_dim, int in_ch, int out_ch)
+void conv2d(volatile float *in_mat, volatile float *out_mat, float *filter_weight, float *filter_bias, int in_dim, int in_ch, int out_ch)
 {
 	int out_dim = afterKernel(in_dim);	// calculate out_mat dimentions
 
@@ -110,22 +112,16 @@ void conv2d(float *in_mat, float *out_mat, float *filter_weight, float *filter_b
 	Input:
 	Output:
 */
-void relu(float *mat, int mat_size, int num_ch) 
-{
-	for (int i_ch = 0; i_ch < num_ch; i_ch++)
-	{
-		for (int i = 0; i < mat_size; i++) 
-		{
-			for (int j = 0; j < mat_size; j++) 
-			{
-				float *ptr = (mat + (i_ch * mat_size * mat_size) + (i * mat_size) + j);
-				if (*ptr < 0) 
-				{
-					*ptr = 0;
-				}
-			}
-		}
-	}
+void relu(volatile float *mat, int mat_size, int num_ch) {
+    int total_elements = num_ch * mat_size * mat_size;
+    volatile float *ptr = mat;
+
+    for (int i = 0; i < total_elements; i++) {
+        if (*ptr < 0) {
+            *ptr = 0;
+        }
+        ptr++;
+    }
 }
 
 
@@ -146,7 +142,7 @@ void relu(float *mat, int mat_size, int num_ch)
   *          The result is stored in the output matrix.
   ******************************************************************************
   */
-void softmax(float *in_mat, float *out_mat, int mat_size)
+void softmax(volatile float *in_mat, volatile float *out_mat, int mat_size)
 {
 	float total_exp = 0.0;
 	// calculate sum of e**input_mat[i]
@@ -180,7 +176,7 @@ void softmax(float *in_mat, float *out_mat, int mat_size)
   *          The result is stored in the output matrix.
   ******************************************************************************
   */
-void fullyconnected(float *in_mat, float *out_mat, float *weight, float *bias, int in_mat_size, int out_mat_size)
+void fullyconnected(volatile float *in_mat, volatile float *out_mat, float *weight, float *bias, int in_mat_size, int out_mat_size)
 {
 	// need to impliment matmul, but too reiji so ...
 	// loop though the output mat to save cal result
@@ -202,7 +198,7 @@ void fullyconnected(float *in_mat, float *out_mat, float *weight, float *bias, i
 	Input:
 	Output:
 */
-void maxpooling2x2(float *in_mat, float *out_mat, uint8_t in_mat_size, uint8_t num_ch)
+void maxpooling2x2(volatile float *in_mat, volatile float *out_mat, uint8_t in_mat_size, uint8_t num_ch)
 {
 	 // Calculate the size of the output matrix
 	uint8_t out_mat_size = (int)(in_mat_size / 2);
@@ -249,7 +245,7 @@ int afterKernel(int n)
 	return (n - FILTER_SIZE + 1);
 }
 
-void givePredict(float *mat, uint8_t *predicted_num, float *predicted_num_confidence)
+void givePredict(volatile float *mat, volatile uint8_t *predicted_num, volatile float *predicted_num_confidence)
 {
 	float max_confidence = mat[0];
 	int max_idx = 0;
@@ -267,16 +263,18 @@ void givePredict(float *mat, uint8_t *predicted_num, float *predicted_num_confid
 
 
 /********************* Convolution BIGGGGboi functions ********************/
-void feedforward(float *in_mat, uint8_t *predicted_num, float *predicted_num_confidence)
+void feedforward(volatile float *in_mat, volatile uint8_t *predicted_num, volatile float *predicted_num_confidence)
 {
 	/*
 	Matrix/Array to store calculated value:
 		One array of 9140 float value = 36560 bytes = about 37Kbytes
 		STM32F401CDU6 DocID025644 Rev 3: Memory maping page 51/135
 					96Kb of memory heckyeah
+
+		Reason of commented this and define it as global variable: cuz heap sucks
 	*/
-	float wtf_mat[WTF_NUM];
-	memset(wtf_mat, 0, SIZEOF_WTF);
+	// float wtf_mat[WTF_NUM];
+	// memset(wtf_mat, 0, SIZEOF_WTF);
 
 	// void conv2d(float *in_mat, float *out_mat, float *filter_weight, float *filter_bias, int in_dim, int in_ch, int out_ch)
 	// void relu(float *mat, int mat_size, int num_ch) 

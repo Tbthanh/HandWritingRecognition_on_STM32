@@ -1,0 +1,13 @@
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:65:6:conv2d	72	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:115:6:relu	40	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:145:6:softmax	48	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:179:6:fullyconnected	32	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:201:6:maxpooling2x2	72	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:243:5:afterKernel	16	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:248:6:givePredict	40	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:266:6:feedforward	40	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:323:6:printMatrix	40	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:356:6:printFilterBias	24	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:365:6:printMat1D	16	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:372:6:printFilterWeight	32	static
+D:/TAI_LIEU/20241/AI_and_App/HandWritingRecognition_on_STM32/Impliment_on_embed_kit/TFT_touch_xpt2046_calib/Core/CNN/cnn.c:382:6:printPredict	32	static
