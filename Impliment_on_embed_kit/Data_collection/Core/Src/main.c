@@ -24,7 +24,6 @@
 #include <stdio.h>
 #include "st7789.h"
 #include "xpt2046.h"
-#include "cnn.h"
 #include "constants.h"
 /* USER CODE END Includes */
 
@@ -48,8 +47,11 @@ SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 DMA_HandleTypeDef hdma_spi1_tx;
 
-/* USER CODE BEGIN PV */
+UART_HandleTypeDef huart1;
 
+/* USER CODE BEGIN PV */
+volatile float cnn_input[INPUT_SIZE * INPUT_SIZE];	// to store CNN input
+uint16_t data_count = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,6 +60,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -87,8 +90,9 @@ void resetButtonPressed(volatile float* cnn_input, volatile uint16_t coordinate_
 		ST7789_DrawFilledRectangle(10, 10, 28, 28, WHITE);
 		HAL_Delay(100);
 		ST7789_WriteString(45, 10, "Predicted: _", Font_7x10, RED, WHITE);
-		ST7789_WriteString(45, 25, "Conf.: _____", Font_7x10, RED, WHITE);
+		ST7789_WriteString(45, 25, "         ", Font_7x10, RED, WHITE);
 		clearCNNinput(cnn_input);
+		data_count ++;
 	}
 }
 
@@ -107,13 +111,12 @@ void drawInterface()
 
 	// Draw CNN button
 	ST7789_DrawFilledRectangle(158, 38, 59, 22, BLACK);
-	ST7789_WriteString(160, 40, " CNN ", Font_11x18, CYAN, BLACK);// 160~226 - 20~38
+	ST7789_WriteString(160, 40, "SEND ", Font_11x18, CYAN, BLACK);// 160~226 - 20~38
 
 	// Minimap border
 	ST7789_DrawRectangle(8, 8, 40, 40, BLACK);
 	ST7789_WriteString(8, 45, "CNN input:", Font_7x10, RED, WHITE);
 	ST7789_WriteString(45, 10, "Predicted: _", Font_7x10, RED, WHITE);
-	ST7789_WriteString(45, 25, "Conf.: _____", Font_7x10, RED, WHITE);
 
 	// Draw drawing border
 	ST7789_DrawRectangle(8, 88, 232, 312, BLACK);
@@ -136,6 +139,20 @@ void drawMinimap(volatile float *in_mat)
 			ST7789_DrawPixel(10 + i, 10 + j, color);  // Draw pixel with selected color
 		}
 	}
+}
+
+uint32_t ITM_SendChar_redefine (uint32_t ch)
+{
+  if (((ITM->TCR & ITM_TCR_ITMENA_Msk) != 0) &&      /* ITM enabled */
+      ((ITM->TER & 1) != 0)   )     /* ITM Port #0 enabled */
+  {
+    while (ITM->PORT[0].u32 == 0)
+    {
+      __NOP();
+    }
+    ITM->PORT[0].u8 = (uint8_t)ch;
+  }
+  return (ch);
 }
 
 
@@ -173,11 +190,15 @@ int main(void)
   MX_DMA_Init();
   MX_SPI1_Init();
   MX_SPI2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   ST7789_Init();
 
   xpt2046_spi(&hspi2);
   xpt2046_init();
+
+  ST7789_Init();
+  ST7789_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -187,7 +208,7 @@ int main(void)
   uint8_t change_flag = 0;
   volatile uint16_t coordinate_x = 0;
   volatile uint16_t coordinate_y = 0;
-  volatile float cnn_input[INPUT_SIZE * INPUT_SIZE];	// to store CNN input
+
 	for (uint16_t i = 0; i < INPUT_SIZE; i++)
 	{
 		for (uint16_t j = 0; j < INPUT_SIZE; j++)
@@ -248,12 +269,12 @@ int main(void)
 		uint8_t cnn_input_idx_y = (coordinate_y - 108)/ 7;
 		// make the input bolder - enlarge the input to 4 pixel
 		uint16_t cnn_input_index00 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y;
-		uint16_t cnn_input_index01 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y - 1;
-		uint16_t cnn_input_index02 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y;
-		uint16_t cnn_input_index03 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y + 1;
-		uint16_t cnn_input_index04 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y - 1;
+//		uint16_t cnn_input_index01 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y - 1;
+//		uint16_t cnn_input_index02 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y;
+//		uint16_t cnn_input_index03 = (cnn_input_idx_x - 1) * INPUT_SIZE + cnn_input_idx_y + 1;
+//		uint16_t cnn_input_index04 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y - 1;
 		uint16_t cnn_input_index05 = cnn_input_idx_x * INPUT_SIZE + cnn_input_idx_y + 1;
-		uint16_t cnn_input_index06 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y - 1;
+//		uint16_t cnn_input_index06 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y - 1;
 		uint16_t cnn_input_index07 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y;
 		uint16_t cnn_input_index08 = (cnn_input_idx_x + 1) * INPUT_SIZE + cnn_input_idx_y + 1;
 
@@ -262,35 +283,35 @@ int main(void)
 		    cnn_input[cnn_input_index00] = 1.0f;
 		}
 
-		if (cnn_input_index01 < INPUT_SIZE * INPUT_SIZE)
-		{
-			cnn_input[cnn_input_index01] = 0.5f;
-		}
+//		if (cnn_input_index01 < INPUT_SIZE * INPUT_SIZE)
+//		{
+//			cnn_input[cnn_input_index01] = 1.0f;
+//		}
+//
+//		if (cnn_input_index02 < INPUT_SIZE * INPUT_SIZE)
+//		{
+//			cnn_input[cnn_input_index02] = 1.0f;
+//		}
+//
+//		if (cnn_input_index03 < INPUT_SIZE * INPUT_SIZE)
+//		{
+//			cnn_input[cnn_input_index03] = 1.0f;
+//		}
 
-		if (cnn_input_index02 < INPUT_SIZE * INPUT_SIZE)
-		{
-			cnn_input[cnn_input_index02] = 1.0f;
-		}
-
-		if (cnn_input_index03 < INPUT_SIZE * INPUT_SIZE)
-		{
-			cnn_input[cnn_input_index03] = 0.5f;
-		}
-
-		if (cnn_input_index04 < INPUT_SIZE * INPUT_SIZE)
-		{
-			cnn_input[cnn_input_index04] = 1.0f;
-		}
+//		if (cnn_input_index04 < INPUT_SIZE * INPUT_SIZE)
+//		{
+//			cnn_input[cnn_input_index04] = 1.0f;
+//		}
 
 		if (cnn_input_index05 < INPUT_SIZE * INPUT_SIZE)
 		{
 			cnn_input[cnn_input_index05] = 1.0f;
 		}
 
-		if (cnn_input_index06 < INPUT_SIZE * INPUT_SIZE)
-		{
-			cnn_input[cnn_input_index06] = 0.5f;
-		}
+//		if (cnn_input_index06 < INPUT_SIZE * INPUT_SIZE)
+//		{
+//			cnn_input[cnn_input_index06] = 1.0f;
+//		}
 
 		if (cnn_input_index07 < INPUT_SIZE * INPUT_SIZE)
 		{
@@ -299,38 +320,40 @@ int main(void)
 
 		if (cnn_input_index08 < INPUT_SIZE * INPUT_SIZE)
 		{
-			cnn_input[cnn_input_index08] = 0.5f;
+			cnn_input[cnn_input_index08] = 1.0f;
 		}
 	}
 
-	// CNN button:
+	uint8_t buffer_uart[30];
+	uint16_t in_mat_idx;
+	// CNN button: SEND DATA TO PC BUTTON
 	if ((coordinate_x > 157 && coordinate_x < 208) &&
-			(coordinate_y >  59 && coordinate_y <  71))
-	{
-		volatile uint8_t predicted_num = 0;
-		volatile float predicted_num_confidence = 0.0;
+	    (coordinate_y > 59 && coordinate_y < 71)) {
+	    sprintf((char *)buffer_uart, "A %d\n", data_count);
+//	    sprintf((char *)buffer_uart, "B %d\n", data_count);
+	    HAL_UART_Transmit(&huart1, buffer_uart, strlen((char *)buffer_uart), 100);
+	    for (uint8_t i = 0; i < INPUT_SIZE; i++)
+	    	{
+	    		for (uint8_t j = 0; j < INPUT_SIZE; j++)
+	    		{
+	    			in_mat_idx = j * INPUT_SIZE + i;  // Calculate the index once per loop
 
-		float cnn_input_flip[INPUT_SIZE * INPUT_SIZE];
-		uint16_t in_mat_idx_flip = 0;
-		uint16_t in_mat_idx = 0;
+	    	        if (cnn_input[in_mat_idx] != 0) {
+	    	            sprintf((char *)buffer_uart, "1, ");
+	    	        } else {
+	    	            sprintf((char *)buffer_uart, "0, ");
+	    	        }
+	    	        HAL_UART_Transmit(&huart1, buffer_uart, strlen((char *)buffer_uart), 100);
+	    	        HAL_Delay(5);
+	    		}
+	    	}
 
-		for (int i = 0; i < INPUT_SIZE; i++)
-		{
-			for (int j = 0; j < INPUT_SIZE; j++)
-			{
-				in_mat_idx_flip = j * INPUT_SIZE + i;  // Calculate the index once per loop
-				in_mat_idx = i * INPUT_SIZE + j;  // Calculate the index once per loop
-				cnn_input_flip[in_mat_idx_flip] = cnn_input[in_mat_idx];
-			}
-		}
-
-		feedforward(cnn_input, &predicted_num, &predicted_num_confidence);
-
-		sprintf(print_string,"Predicted: %d", predicted_num);
-		ST7789_WriteString(45, 10, print_string, Font_7x10, RED, WHITE);
-		sprintf(print_string,"Conf.: %.3f", predicted_num_confidence);
-		ST7789_WriteString(45, 25, print_string, Font_7x10, RED, WHITE);
+	    sprintf((char *)buffer_uart, "\nDone\n");
+	    HAL_UART_Transmit(&huart1, buffer_uart, strlen((char *)buffer_uart), 100);
+	    HAL_Delay(1000);
+	    ST7789_WriteString(45, 25, "SENT done", Font_7x10, RED, WHITE);
 	}
+
 
 	// draw mini drawin plane
 	drawMinimap(cnn_input);
@@ -462,6 +485,39 @@ static void MX_SPI2_Init(void)
   /* USER CODE BEGIN SPI2_Init 2 */
 
   /* USER CODE END SPI2_Init 2 */
+
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
 
 }
 
