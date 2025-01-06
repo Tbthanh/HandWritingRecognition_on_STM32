@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <string.h>
 #include "st7789.h"
 #include "xpt2046.h"
 #include "constants.h"
@@ -140,22 +141,6 @@ void drawMinimap(volatile float *in_mat)
 		}
 	}
 }
-
-uint32_t ITM_SendChar_redefine (uint32_t ch)
-{
-  if (((ITM->TCR & ITM_TCR_ITMENA_Msk) != 0) &&      /* ITM enabled */
-      ((ITM->TER & 1) != 0)   )     /* ITM Port #0 enabled */
-  {
-    while (ITM->PORT[0].u32 == 0)
-    {
-      __NOP();
-    }
-    ITM->PORT[0].u8 = (uint8_t)ch;
-  }
-  return (ch);
-}
-
-
 /* USER CODE END 0 */
 
 /**
@@ -209,16 +194,18 @@ int main(void)
   volatile uint16_t coordinate_x = 0;
   volatile uint16_t coordinate_y = 0;
 
-	for (uint16_t i = 0; i < INPUT_SIZE; i++)
-	{
-		for (uint16_t j = 0; j < INPUT_SIZE; j++)
-		{
-			uint16_t in_mat_idx = i * INPUT_SIZE + j;  // Calculate the index once per loop
-			cnn_input[in_mat_idx] = 0;
-		}
-	}
+  // Initialize the input mat
+  for (uint16_t i = 0; i < INPUT_SIZE; i++)
+  {
+	  for (uint16_t j = 0; j < INPUT_SIZE; j++)
+	  {
+		  uint16_t in_mat_idx = i * INPUT_SIZE + j;
+		  cnn_input[in_mat_idx] = 0;
+	  }
+  }
 
   drawInterface();
+
   while (1)
   {
 	uint16_t pre_coordinate_x = coordinate_x;
@@ -253,13 +240,14 @@ int main(void)
 	}
 
 //	// Draw function
+	uint8_t SOMERANDOMASSSHIZ = 15;
 	if (
 			// bounding of draw box
 			(coordinate_x >  25 && coordinate_x < 221) &&
 			(coordinate_y > 108 && coordinate_y < 307) &&
 			// prevent jumping in value
-			(coordinate_x < pre_coordinate_x + 10) && (coordinate_x > pre_coordinate_x - 10) &&
-			(coordinate_y < pre_coordinate_y + 10) && (coordinate_y > pre_coordinate_y - 10)
+			(coordinate_x < pre_coordinate_x + SOMERANDOMASSSHIZ) && (coordinate_x > pre_coordinate_x - SOMERANDOMASSSHIZ) &&
+			(coordinate_y < pre_coordinate_y + SOMERANDOMASSSHIZ) && (coordinate_y > pre_coordinate_y - SOMERANDOMASSSHIZ)
 		)
 	{
 		ST7789_DrawFilledRectangle(coordinate_x - 4, coordinate_y - 4, 8, 8, RED);
@@ -329,8 +317,8 @@ int main(void)
 	// CNN button: SEND DATA TO PC BUTTON
 	if ((coordinate_x > 157 && coordinate_x < 208) &&
 	    (coordinate_y > 59 && coordinate_y < 71)) {
-	    sprintf((char *)buffer_uart, "A %d\n", data_count);
-//	    sprintf((char *)buffer_uart, "B %d\n", data_count);
+//	    sprintf((char *)buffer_uart, "A %d\n\r", data_count);
+//	    sprintf((char *)buffer_uart, "B %d\n\r", data_count);
 	    HAL_UART_Transmit(&huart1, buffer_uart, strlen((char *)buffer_uart), 100);
 	    for (uint8_t i = 0; i < INPUT_SIZE; i++)
 	    	{
@@ -348,7 +336,8 @@ int main(void)
 	    		}
 	    	}
 
-	    sprintf((char *)buffer_uart, "\nDone\n");
+//	    sprintf((char *)buffer_uart, "\n\rDone\n\r");
+	    sprintf((char *)buffer_uart, "\n\r");
 	    HAL_UART_Transmit(&huart1, buffer_uart, strlen((char *)buffer_uart), 100);
 	    HAL_Delay(1000);
 	    ST7789_WriteString(45, 25, "SENT done", Font_7x10, RED, WHITE);
