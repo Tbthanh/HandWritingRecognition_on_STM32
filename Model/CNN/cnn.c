@@ -224,17 +224,16 @@ void maxpooling2x2(float *in_mat, float *out_mat, uint8_t in_mat_size, uint8_t n
 						// Calculate the index of the current input element
 						int row_idx = i * POOLING_SIZE + m;
 						int col_idx = j * POOLING_SIZE + n;
-						int input_idx = row_idx * in_mat_size + col_idx;
+						// int input_idx = row_idx * in_mat_size + col_idx;
+						int input_idx = i_ch * in_mat_size * in_mat_size + row_idx * in_mat_size + col_idx;;
 
 						// Update the maximum value
 						if (in_mat[input_idx] > max_value) {
 							max_value = in_mat[input_idx];
-							// max_value = input_mat[i_ch][row_idx][col_idx];
 						}
 					}
 				}
 				// Assign the maximum value to the output matrix
-				// output_mat[i_ch][i][j] = max_value;
 				int output_idx = i_ch * out_mat_size * out_mat_size + i * out_mat_size + j;
 				out_mat[output_idx] = max_value;
 			}
